@@ -2,6 +2,8 @@
 
 > Part of the **Forward Deployed Engineering (FDE) Mastery Repo** — a one-stop learning path for becoming a Forward Deployed Engineer. This is Topic 5, the second subsection of **Module 1: LLM Engineering & Model Integration**. It builds on Topic 2 (how LLMs actually generate text) and Topic 4 (reasoning models and thinking tokens) — the techniques in this guide are, in large part, different ways of shaping what goes into the model *before* generation, to get more reliable behavior out.
 
+![Prompt Design & Security](./assets/topic-05-prompt-design.jpg)
+
 ---
 
 ## Table of Contents

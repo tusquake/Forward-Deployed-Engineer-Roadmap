@@ -2,6 +2,8 @@
 
 > Part of the **Forward Deployed Engineering (FDE) Mastery Repo** — a one-stop learning path for becoming a Forward Deployed Engineer. This is Topic 6, the third and final subsection of **Module 1: LLM Engineering & Model Integration**. It builds on Topic 3 (raw API integration and tool-use), Topic 4 (KV Cache and reasoning models), and Topic 5 (prompt design and system prompt architecture) — the techniques here are the practical engineering layer that turns everything in those topics into something reliable enough for production.
 
+![Advanced LLM Engineering Techniques](./assets/topic-06-advanced-techniques.jpg)
+
 ---
 
 ## Table of Contents

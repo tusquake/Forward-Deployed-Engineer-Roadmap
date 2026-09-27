@@ -25,7 +25,7 @@ Every topic in this repository follows the same format:
 
 ### Module 1: LLM Engineering & Model Integration (3 Weeks)
 
-**Capstone Project:** AI Interview Coach
+**Capstone Project:** [The Receipt & Expense Tracker](./01-llm-engineering-and-model-integration/project-receipt-expense-tracker/README.md)
 
 - **LLM Fundamentals** — Transformer architecture, the attention mechanism, KV Cache, Mixture of Experts (MoE), reasoning models (o1, Claude Extended Thinking), the LLM ecosystem (ChatGPT, Claude, Copilot, Cursor), and no-code tools (Bolt, Lovable, v0, n8n).
 - **Prompt Design** — Zero-shot and few-shot prompting, role/task/context/format/persona design, Chain-of-Thought (CoT), Tree of Thought (ToT), self-consistency, reflection and plan-and-execute patterns, prompt chaining, system prompt architecture, and prompt injection defense.

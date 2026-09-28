@@ -144,6 +144,15 @@ def get_all_expenses(category: Optional[str] = None, search: Optional[str] = Non
         return [row_to_record(r) for r in rows]
 
 
+def get_expense_by_id(expense_id: int) -> Optional[ExpenseRecord]:
+    init_db()
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM expenses WHERE id = ?", (expense_id,)).fetchone()
+        if row:
+            return row_to_record(row)
+        return None
+
+
 def delete_expense(expense_id: int) -> bool:
     init_db()
     with get_db() as conn:

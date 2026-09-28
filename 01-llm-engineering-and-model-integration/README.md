@@ -5,12 +5,12 @@
 
 ---
 
-## 🎯 Module Objective
+## Module Objective
 Master the foundations of Large Language Models, prompt engineering architectures, structured outputs, tool integration, token economics, and API integration across major providers (OpenAI, Anthropic, Gemini).
 
 ---
 
-## 📋 Syllabus & Topic Breakdown
+## Syllabus & Topic Breakdown
 
 ### 1. LLM Fundamentals
 - [x] **Transformer Architecture**: Self-attention, multi-head attention, encoder-decoder vs decoder-only models.
@@ -37,7 +37,7 @@ Master the foundations of Large Language Models, prompt engineering architecture
 
 ---
 
-## 📚 Notes & Study Guides
+## Notes & Study Guides
 
 Available study guides in [`notes/`](./notes/):
 1. [01-the-evolution-of-ai.md](./notes/01-the-evolution-of-ai.md) — History, milestones, and the role of a Forward Deployed AI Engineer.
@@ -49,7 +49,7 @@ Available study guides in [`notes/`](./notes/):
 
 ---
 
-## 🛠️ Capstone Project: The Receipt & Expense Tracker
+## Capstone Project: The Receipt & Expense Tracker
 - **Directory**: [`project-receipt-expense-tracker/`](./project-receipt-expense-tracker/)
 - **Documentation**: [Project Guide & Architecture](./project-receipt-expense-tracker/README.md)
 - **Technology Stack**: Python (FastAPI, Google Gemini Vision API `google-genai`, Pydantic, Pillow, SQLite) + Responsive Modern Web Dashboard.

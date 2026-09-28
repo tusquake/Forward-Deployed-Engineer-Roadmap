@@ -1,0 +1,13 @@
+# Environment Variables
+.env
+
+# SQLite Database
+*.db
+
+# Uploaded Receipt Images
+uploads/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class

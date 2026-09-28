@@ -106,7 +106,19 @@ def extract_receipt(
 
     optimized_bytes, target_mime = optimize_image_for_tokens(image_bytes)
 
-    # 1. Attempt Primary: Google Gemini API
+    # 1. If user explicitly selected Groq model
+    if model_name and ("qwen" in model_name.lower() or "groq" in model_name.lower()):
+        if active_groq_key and active_groq_key not in ("your_groq_api_key_here", ""):
+            receipt = _extract_with_groq(
+                optimized_bytes=optimized_bytes,
+                mime_type=target_mime,
+                api_key=active_groq_key,
+                model_name=model_name
+            )
+            arithmetic_valid, discrepancy = verify_arithmetic(receipt)
+            return receipt, arithmetic_valid, discrepancy
+
+    # 2. Attempt Primary: Google Gemini API
     if active_gemini_key and active_gemini_key not in ("your_gemini_api_key_here", ""):
         try:
             receipt = _extract_with_gemini(

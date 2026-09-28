@@ -64,6 +64,12 @@ async def get_configuration():
         "has_gemini": has_gemini,
         "has_groq_fallback": has_groq,
         "model": runtime_config["model"],
+        "available_models": [
+            {"id": "gemini-3.8-flash", "name": "Gemini 3.8 Flash (Default / High Speed)", "provider": "Google"},
+            {"id": "gemini-flash-latest", "name": "Gemini Flash Latest", "provider": "Google"},
+            {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro (Deep Reasoning)", "provider": "Google"},
+            {"id": "qwen/qwen3.8-27b", "name": "Groq Vision Fallback (Qwen 3.8 27B)", "provider": "Groq"}
+        ],
         "categories": [c.value for c in Category]
     }
 
@@ -81,6 +87,14 @@ async def update_configuration(
     if model.strip():
         runtime_config["model"] = model.strip()
     return {"status": "success", "message": "Configuration updated successfully"}
+
+
+@app.get("/api/sample-receipt")
+async def get_sample_receipt():
+    sample_path = os.path.join(STATIC_DIR, "sample_whole_foods.png")
+    if os.path.exists(sample_path):
+        return {"url": "/sample_whole_foods.png", "filename": "sample_whole_foods.png"}
+    return {"url": None}
 
 
 @app.post("/api/extract", response_model=ExpenseRecord)
@@ -165,5 +179,5 @@ app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
-    print(f"🚀 Starting Receipt & Expense Tracker on http://127.0.0.1:{port}")
+    print(f"Starting Receipt & Expense Tracker on http://127.0.0.1:{port}")
     uvicorn.run("src.app:app", host="0.0.0.0", port=port, reload=True)

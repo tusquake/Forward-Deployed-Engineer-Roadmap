@@ -1,6 +1,30 @@
 let activeFile = null;
 let currentCurrency = "$";
 
+const SVG_CHECK = `
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+  </svg>
+`;
+
+const SVG_ALERT = `
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+    <line x1="12" y1="9" x2="12" y2="13"></line>
+    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+  </svg>
+`;
+
+const SVG_DOC_PLACEHOLDER = `
+  <div class="thumb-placeholder" title="No image uploaded">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+      <polyline points="14 2 14 8 20 8"></polyline>
+    </svg>
+  </div>
+`;
+
 document.addEventListener("DOMContentLoaded", () => {
   initEventListeners();
   checkConfiguration();
@@ -13,10 +37,22 @@ function initEventListeners() {
   const fileInput = document.getElementById("file-input");
   const btnRemove = document.getElementById("btn-remove-image");
   const btnExtract = document.getElementById("btn-extract");
+  const btnSample = document.getElementById("btn-sample-receipt");
   const themeToggle = document.getElementById("theme-toggle");
 
   // Drag & drop
-  dropZone.addEventListener("click", () => fileInput.click());
+  dropZone.addEventListener("click", (e) => {
+    if (e.target.closest("#btn-remove-image")) return;
+    fileInput.click();
+  });
+
+  dropZone.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      fileInput.click();
+    }
+  });
+
   fileInput.addEventListener("change", (e) => {
     if (e.target.files && e.target.files[0]) {
       handleSelectedFile(e.target.files[0]);
@@ -46,20 +82,27 @@ function initEventListeners() {
       const file = e.clipboardData.files[0];
       if (file.type.startsWith("image/")) {
         handleSelectedFile(file);
-        showToast("Image pasted from clipboard!");
+        showToast("Image pasted from clipboard");
       }
     }
   });
 
+  // Remove preview
   btnRemove.addEventListener("click", (e) => {
     e.stopPropagation();
     clearSelectedFile();
   });
 
+  // Load sample receipt button
+  if (btnSample) {
+    btnSample.addEventListener("click", loadSampleReceipt);
+  }
+
+  // Extract action
   btnExtract.addEventListener("click", performExtraction);
 
   // Filter & search
-  document.getElementById("search-input").addEventListener("input", debounce(loadExpenses, 300));
+  document.getElementById("search-input").addEventListener("input", debounce(loadExpenses, 250));
   document.getElementById("filter-category").addEventListener("change", loadExpenses);
 
   // Settings modal
@@ -81,13 +124,27 @@ function initEventListeners() {
     const current = document.body.getAttribute("data-theme") || "dark";
     const nextTheme = current === "dark" ? "light" : "dark";
     document.body.setAttribute("data-theme", nextTheme);
-    showToast(`Switched to ${nextTheme} mode`);
+    showToast(`Switched to ${nextTheme} theme`);
   });
+}
+
+async function loadSampleReceipt() {
+  try {
+    const res = await fetch("/sample_whole_foods.png");
+    if (!res.ok) throw new Error("Sample receipt file not accessible");
+    const blob = await res.blob();
+    const file = new File([blob], "sample_whole_foods.png", { type: "image/png" });
+    handleSelectedFile(file);
+    showToast("Loaded sample receipt: Whole Foods Market");
+  } catch (err) {
+    console.error(err);
+    showToast("Could not load sample receipt");
+  }
 }
 
 function handleSelectedFile(file) {
   if (!file.type.startsWith("image/")) {
-    showToast("Please select a valid image file (JPG, PNG, WebP).");
+    showToast("Please provide a valid image (PNG, JPG, or WebP)");
     return;
   }
 
@@ -109,20 +166,23 @@ function clearSelectedFile() {
   document.getElementById("preview-container").classList.add("hidden");
   document.getElementById("drop-prompt").classList.remove("hidden");
   document.getElementById("btn-extract").disabled = true;
-  document.getElementById("scan-laser").classList.add("hidden");
+  document.getElementById("processing-bar").classList.add("hidden");
 }
 
 async function performExtraction() {
   if (!activeFile) return;
 
   const btnExtract = document.getElementById("btn-extract");
-  const laser = document.getElementById("scan-laser");
+  const btnLabel = document.getElementById("btn-extract-label");
+  const progressBar = document.getElementById("processing-bar");
   const valBadge = document.getElementById("validation-badge");
 
   btnExtract.disabled = true;
-  laser.classList.remove("hidden");
-  valBadge.className = "badge badge-scanning";
-  valBadge.textContent = "Scanning with Gemini Vision...";
+  btnLabel.textContent = "Extracting...";
+  progressBar.classList.remove("hidden");
+
+  valBadge.className = "status-tag tag-active";
+  valBadge.textContent = "Processing";
 
   const formData = new FormData();
   formData.append("file", activeFile);
@@ -137,22 +197,23 @@ async function performExtraction() {
 
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.detail || "Failed to process receipt");
+      throw new Error(err.detail || "Extraction failed");
     }
 
     const data = await res.json();
     displayExtractionResult(data);
     loadStats();
     loadExpenses();
-    showToast(`Successfully extracted ${data.merchant_name}!`);
+    showToast(`Extracted: ${data.merchant_name}`);
   } catch (error) {
     console.error(error);
     showToast(`Extraction error: ${error.message}`);
-    valBadge.className = "badge badge-idle";
-    valBadge.textContent = "Extraction Failed";
+    valBadge.className = "status-tag tag-warning";
+    valBadge.textContent = "Failed";
   } finally {
     btnExtract.disabled = false;
-    laser.classList.add("hidden");
+    btnLabel.textContent = "Process Receipt";
+    progressBar.classList.add("hidden");
   }
 }
 
@@ -161,18 +222,18 @@ function displayExtractionResult(data) {
   const resultDisplay = document.getElementById("result-display");
   resultDisplay.classList.remove("hidden");
 
-  document.getElementById("res-merchant").textContent = data.merchant_name || "Unknown Store";
+  document.getElementById("res-merchant").textContent = data.merchant_name || "Unidentified Merchant";
   document.getElementById("res-date").textContent = `Purchase Date: ${data.purchase_date || "N/A"}`;
 
   // Category
   const catBadge = document.getElementById("res-category");
   catBadge.textContent = data.category || "other";
-  catBadge.className = `category-badge cat-${(data.category || "other").toLowerCase()}`;
+  catBadge.className = `category-pill cat-${(data.category || "other").toLowerCase()}`;
 
   // Currency
   currentCurrency = data.currency === "USD" ? "$" : `${data.currency} `;
 
-  // Line items
+  // Line items table
   const tbody = document.getElementById("items-tbody");
   tbody.innerHTML = "";
   if (data.line_items && data.line_items.length > 0) {
@@ -180,14 +241,14 @@ function displayExtractionResult(data) {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>${escapeHtml(item.description)}</td>
-        <td class="text-center font-mono">${item.quantity}</td>
-        <td class="text-right font-mono">${currentCurrency}${item.unit_price.toFixed(2)}</td>
-        <td class="text-right font-mono">${currentCurrency}${item.line_total.toFixed(2)}</td>
+        <td class="cell-center num-tabular">${item.quantity}</td>
+        <td class="cell-right num-tabular">${currentCurrency}${item.unit_price.toFixed(2)}</td>
+        <td class="cell-right num-tabular">${currentCurrency}${item.line_total.toFixed(2)}</td>
       `;
       tbody.appendChild(tr);
     });
   } else {
-    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted">No individual items extracted</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="cell-center cell-muted">No individual line items parsed</td></tr>`;
   }
 
   // Totals
@@ -197,24 +258,25 @@ function displayExtractionResult(data) {
 
   // Guardrail banner
   const banner = document.getElementById("guardrail-banner");
+  const iconWrap = document.getElementById("guardrail-icon-wrap");
   const title = document.getElementById("guardrail-title");
   const desc = document.getElementById("guardrail-desc");
   const valBadge = document.getElementById("validation-badge");
 
   if (data.arithmetic_valid) {
-    banner.className = "guardrail-banner banner-success";
-    banner.querySelector(".banner-icon").textContent = "✓";
-    title.textContent = "Deterministic Guardrail: Verified";
-    desc.textContent = "Sum of extracted line items and tax matches printed grand total.";
-    valBadge.className = "badge badge-success";
-    valBadge.textContent = "Verified Schema";
+    banner.className = "audit-card audit-pass";
+    iconWrap.innerHTML = SVG_CHECK;
+    title.textContent = "Arithmetic Reconciled";
+    desc.textContent = "Sum of extracted line items and recorded tax matches the grand total.";
+    valBadge.className = "status-tag tag-success";
+    valBadge.textContent = "Reconciled";
   } else {
-    banner.className = "guardrail-banner banner-warning";
-    banner.querySelector(".banner-icon").textContent = "⚠️";
-    title.textContent = `Arithmetic Discrepancy: ${currentCurrency}${data.discrepancy_amount.toFixed(2)}`;
-    desc.textContent = "Mismatch between line items + tax and total. Flagged for manual review.";
-    valBadge.className = "badge badge-idle";
-    valBadge.textContent = "Review Needed";
+    banner.className = "audit-card audit-mismatch";
+    iconWrap.innerHTML = SVG_ALERT;
+    title.textContent = `Discrepancy: ${currentCurrency}${data.discrepancy_amount.toFixed(2)}`;
+    desc.textContent = "Computed sum differs from printed grand total. Flagged for review.";
+    valBadge.className = "status-tag tag-warning";
+    valBadge.textContent = "Variance Flagged";
   }
 
   // Confidence Notes
@@ -253,55 +315,60 @@ async function loadExpenses() {
 
   try {
     const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch expenses");
+    if (!res.ok) throw new Error("Failed to load records");
     const records = await res.json();
 
     tbody.innerHTML = "";
     if (records.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="10" class="text-center empty-state">No receipts found. Upload your first receipt above!</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="10" class="cell-center cell-muted" style="padding: 24px;">No expense records found.</td></tr>`;
       return;
     }
 
     records.forEach((r) => {
       const tr = document.createElement("tr");
-      const thumb = r.image_url ? `<img src="${r.image_url}" alt="Receipt" class="receipt-thumb">` : "📄";
+      const thumb = r.image_url
+        ? `<img src="${r.image_url}" alt="Receipt" class="receipt-thumb">`
+        : SVG_DOC_PLACEHOLDER;
+
       const guardrailBadge = r.arithmetic_valid
-        ? `<span class="guardrail-pill pill-pass">Passed</span>`
-        : `<span class="guardrail-pill pill-mismatch">Mismatch ($${r.discrepancy_amount.toFixed(2)})</span>`;
+        ? `<span class="audit-badge-pill badge-reconciled">Reconciled</span>`
+        : `<span class="audit-badge-pill badge-discrepancy">Variance ($${r.discrepancy_amount.toFixed(2)})</span>`;
 
       tr.innerHTML = `
         <td>${thumb}</td>
-        <td class="font-mono">${r.purchase_date}</td>
+        <td class="num-tabular">${r.purchase_date}</td>
         <td><strong>${escapeHtml(r.merchant_name)}</strong></td>
-        <td><span class="category-badge cat-${r.category.toLowerCase()}">${r.category}</span></td>
-        <td class="text-center font-mono">${r.line_items ? r.line_items.length : 0}</td>
-        <td class="text-right font-mono">$${r.subtotal.toFixed(2)}</td>
-        <td class="text-right font-mono">$${r.tax.toFixed(2)}</td>
-        <td class="text-right font-mono"><strong>$${r.total.toFixed(2)}</strong></td>
-        <td class="text-center">${guardrailBadge}</td>
-        <td class="text-center">
-          <button class="btn btn-sm btn-danger" onclick="deleteExpenseItem(${r.id})">Delete</button>
+        <td><span class="category-pill cat-${r.category.toLowerCase()}">${r.category}</span></td>
+        <td class="cell-center num-tabular">${r.line_items ? r.line_items.length : 0}</td>
+        <td class="cell-right num-tabular">$${r.subtotal.toFixed(2)}</td>
+        <td class="cell-right num-tabular">$${r.tax.toFixed(2)}</td>
+        <td class="cell-right num-tabular"><strong>$${r.total.toFixed(2)}</strong></td>
+        <td class="cell-center">${guardrailBadge}</td>
+        <td class="cell-center">
+          <button class="btn btn-xs btn-danger" onclick="deleteExpenseItem(${r.id})" title="Delete record" type="button">
+            Delete
+          </button>
         </td>
       `;
       tbody.appendChild(tr);
     });
   } catch (err) {
     console.error(err);
-    tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted">Error loading ledger records.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="cell-center cell-muted">Failed to load ledger records.</td></tr>`;
   }
 }
 
 async function deleteExpenseItem(id) {
-  if (!confirm("Are you sure you want to delete this expense record?")) return;
+  if (!confirm("Are you sure you want to remove this expense record?")) return;
   try {
     const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
     if (res.ok) {
-      showToast("Expense record deleted.");
+      showToast("Expense record removed");
       loadStats();
       loadExpenses();
     }
   } catch (err) {
-    showToast("Error deleting item.");
+    showToast("Error deleting record");
   }
 }
 
@@ -314,11 +381,23 @@ async function checkConfiguration() {
     const text = document.getElementById("status-text");
 
     if (cfg.is_configured) {
-      pill.className = "status-pill status-live";
-      text.textContent = `Gemini Live (${cfg.model})`;
+      pill.className = "status-indicator status-ready";
+      if (cfg.has_gemini && cfg.has_groq_fallback) {
+        text.textContent = `Online: Gemini + Groq Fallback`;
+      } else if (cfg.has_gemini) {
+        text.textContent = `Online: Gemini (${cfg.model})`;
+      } else {
+        text.textContent = `Online: Groq Fallback`;
+      }
     } else {
-      pill.className = "status-pill status-demo";
-      text.textContent = "Demo / Mock Mode (Click Settings)";
+      pill.className = "status-indicator status-warning";
+      text.textContent = "Offline (Configure in Settings)";
+    }
+
+    // Set model in input if present
+    const modelInput = document.getElementById("input-model-name");
+    if (modelInput && cfg.model) {
+      modelInput.value = cfg.model;
     }
   } catch (err) {
     console.warn("Could not check config", err);
@@ -327,11 +406,13 @@ async function checkConfiguration() {
 
 async function saveSettings() {
   const apiKey = document.getElementById("input-api-key").value;
+  const groqKey = document.getElementById("input-groq-key").value;
   const model = document.getElementById("input-model-name").value;
 
   const formData = new FormData();
-  formData.append("api_key", apiKey);
-  formData.append("model", model);
+  if (apiKey.trim()) formData.append("api_key", apiKey.trim());
+  if (groqKey.trim()) formData.append("groq_key", groqKey.trim());
+  if (model.trim()) formData.append("model", model.trim());
 
   try {
     const res = await fetch("/api/config", {
@@ -340,11 +421,11 @@ async function saveSettings() {
     });
     if (res.ok) {
       document.getElementById("modal-settings").classList.add("hidden");
-      showToast("Configuration saved!");
+      showToast("Settings updated successfully");
       checkConfiguration();
     }
   } catch (err) {
-    showToast("Failed to save settings.");
+    showToast("Failed to save settings");
   }
 }
 
@@ -354,7 +435,7 @@ function showToast(message) {
   toast.classList.remove("hidden");
   setTimeout(() => {
     toast.classList.add("hidden");
-  }, 3500);
+  }, 3200);
 }
 
 function debounce(func, wait) {
